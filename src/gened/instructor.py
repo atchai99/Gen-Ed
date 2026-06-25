@@ -37,6 +37,7 @@ from .component_registry import (
 from .csv import csv_response
 from .data_deletion import delete_class_data
 from .db import get_db
+from .llm import LLM, with_llm
 from .redir import safe_redirect
 from .tables import BoolCol, DataTable, DataTableSpec, NumCol, UserCol
 
@@ -216,3 +217,51 @@ def delete_class() -> Response:
 
     switch_class(None)
     return redirect(url_for("profile.main"))
+
+@bp.route("/summarize", methods=["POST"])
+@with_llm(spend_token=True, is_api=True)
+def summarize_class(llm: LLM) -> str:
+    """Generate an LLM summary of all student activity in the current class."""
+    import asyncio
+    cur_class = get_auth_class()
+    class_id = cur_class.class_id
+    db = get_db()
+
+    # Fetch all student activity for this class from all registered components
+    filters = _make_class_filters()
+    activity_lines = []
+
+    for component in get_registered_components():
+        if not (ds := component.data_source):
+            continue
+        if not component.is_available():
+            continue
+        rows = ds.get_data(filters).fetchall()
+        if not rows:
+            continue
+        activity_lines.append(f"\n--- {component.display_name} activity ---")
+        for row in rows:
+            activity_lines.append(str(dict(row)))
+
+    if not activity_lines:
+        return "No student activity found in this class yet."
+
+    activity_text = "\n".join(activity_lines)
+
+    sys_prompt = (
+        "You are an assistant helping an instructor understand their students' activity in an online learning tool. "
+        "Summarize the following student activity data for the instructor. "
+        "Highlight common topics, patterns, areas where students seem to struggle, and anything else that might be useful for the instructor to know. "
+        "Be concise but insightful."
+    )
+
+    messages = [
+        {'role': 'system', 'content': sys_prompt},
+        {'role': 'user', 'content': f"Here is the student activity data for class '{cur_class.class_name}':\n\n{activity_text}"},
+    ]
+
+    _response, response_txt = asyncio.run(
+        llm.get_completion(messages=messages)
+    )
+
+    return response_txt
