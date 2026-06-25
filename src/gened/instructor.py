@@ -255,7 +255,7 @@ def summarize_class(llm: LLM) -> str:
         "Be concise but insightful."
     )
 
-  messages: list[ChatMessage] = [
+ messages: list[ChatMessage] = [
         {'role': 'system', 'content': sys_prompt},
         {'role': 'user', 'content': f"Here is the student activity data for class '{cur_class.class_name}':\n\n{activity_text}"},
     ]
