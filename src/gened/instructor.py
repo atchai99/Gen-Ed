@@ -37,7 +37,7 @@ from .component_registry import (
 from .csv import csv_response
 from .data_deletion import delete_class_data
 from .db import get_db
-from .llm import LLM, with_llm
+from .llm import LLM, ChatMessage, with_llm
 from .redir import safe_redirect
 from .tables import BoolCol, DataTable, DataTableSpec, NumCol, UserCol
 
@@ -255,11 +255,10 @@ def summarize_class(llm: LLM) -> str:
         "Be concise but insightful."
     )
 
-    messages = [
+  messages: list[ChatMessage] = [
         {'role': 'system', 'content': sys_prompt},
         {'role': 'user', 'content': f"Here is the student activity data for class '{cur_class.class_name}':\n\n{activity_text}"},
     ]
-
     _response, response_txt = asyncio.run(
         llm.get_completion(messages=messages)
     )
