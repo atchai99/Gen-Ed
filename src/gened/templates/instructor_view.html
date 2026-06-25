@@ -35,5 +35,31 @@ SPDX-License-Identifier: AGPL-3.0-only
       </div>
     {% endfor %}
   </div>
+<section class="section p-5" style="border-top: 2px solid #eee;">
+    <h2 class="is-size-3">Class Activity Summary</h2>
+    <p class="help-text mb-3">Generate an AI summary of all student activity in this class.</p>
+    <div x-data="{ loading: false, summary: null, error: null }">
+      <button
+        class="button is-link"
+        type="button"
+        :class="loading && 'is-loading'"
+        :disabled="loading"
+        @click="
+          loading = true;
+          summary = null;
+          error = null;
+          fetch('{{ url_for('instructor.summarize_class') }}', { method: 'POST' })
+            .then(r => r.text())
+            .then(text => { summary = text; loading = false; })
+            .catch(e => { error = e.toString(); loading = false; })
+        "
+      >
+        Summarize Class Activity
+      </button>
+
+      <div class="mt-4 content" x-show="summary" x-text="summary" style="white-space: pre-wrap; background: #f5f5f5; padding: 1em; border-radius: 4px; max-width: 80em;"></div>
+      <div class="mt-4 notification is-danger" x-show="error" x-text="error"></div>
+    </div>
+  </section>
 </section>
 {% endblock body %}
